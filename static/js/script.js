@@ -27,10 +27,42 @@ document.addEventListener('DOMContentLoaded', function() {
             return [];
         }
         
-        const lowerQuery = query.toLowerCase();
-        return allPatterns.filter(pattern => 
-            pattern.toLowerCase().includes(lowerQuery)
-        ).slice(0, 10);
+        const queryWords = query.toLowerCase().trim().split(/\s+/);
+        
+        const scoredPatterns = allPatterns.map(pattern => {
+            const lowerPattern = pattern.toLowerCase();
+            let score = 0;
+            let matchedWords = 0;
+            
+            queryWords.forEach(word => {
+                if (word.length < 2) return;
+                
+                if (lowerPattern.includes(word)) {
+                    matchedWords++;
+                    
+                    if (lowerPattern.startsWith(word)) {
+                        score += 3;
+                    } else if (lowerPattern.split(/\s+/).some(w => w.startsWith(word))) {
+                        score += 2;
+                    } else {
+                        score += 1;
+                    }
+                }
+            });
+            
+            if (matchedWords > 0) {
+                score += matchedWords * 10;
+                score += (matchedWords / queryWords.length) * 20;
+            }
+            
+            return { pattern, score };
+        });
+        
+        return scoredPatterns
+            .filter(item => item.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 10)
+            .map(item => item.pattern);
     }
     
     function showSuggestions(suggestions) {
@@ -215,7 +247,12 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: message })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             setTimeout(() => {
                 document.getElementById('typing-indicator')?.remove();

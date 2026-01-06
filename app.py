@@ -1,26 +1,46 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
-import nltk
-nltk.download("punkt", quiet=True)
-nltk.download("wordnet", quiet=True)
-from nltk.stem import WordNetLemmatizer
-import pickle
-import numpy as np
-from tensorflow import keras
+# Standard library imports
 import json
-import random
-from datetime import datetime, timedelta
 import os
+import pickle
+import random
 import subprocess
 import threading
 import time
-import shutil
-from werkzeug.security import generate_password_hash, check_password_hash
-from functools import wraps
-from database import db_manager
+from datetime import datetime
 from difflib import SequenceMatcher
+from functools import wraps
 
+# Third-party imports
+import nltk
+import numpy as np
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from nltk.stem import WordNetLemmatizer
+from tensorflow import keras
+
+# Local imports
+from database import db_manager
+
+# Download NLTK data
+nltk.download("punkt", quiet=True)
+nltk.download("wordnet", quiet=True)
+
+# Constants
+SECRET_KEY = '25082025-chtbtbrmppnrpn-rfldmr'
+MODEL_DIR = 'model'
+MODEL_PATH = 'model/chatbot_brmp_model.h5'
+WORDS_PATH = 'model/words.pkl'
+CLASSES_PATH = 'model/classes.pkl'
+INTENTS_PATH = 'intents.json'
+SIMILARITY_THRESHOLD = 0.75  # Threshold untuk fuzzy matching (75% similarity)
+CONFIDENCE_THRESHOLD = 0.50  # Minimum confidence untuk prediction (50%)
+DEFAULT_HOST = '0.0.0.0'
+DEFAULT_PORT = 5000
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'svg'}
+MAX_IMAGE_SIZE_MB = 2
+
+# Flask app initialization
 app = Flask(__name__)
-app.secret_key = '25082025-chtbtbrmppnrpn-rfldmr'
+app.secret_key = SECRET_KEY
 
 # Global variables untuk tracking
 training_status = {"status": "ready", "progress": 0, "message": ""}
@@ -46,14 +66,49 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Visitor tracking middleware
+@app.before_request
+def track_visitor():
+    """Track visitor visits for analytics (only for non-admin pages)."""
+    # Skip tracking for admin pages, API endpoints, and static files
+    if request.path.startswith('/admin') or \
+       request.path.startswith('/api') or \
+       request.path.startswith('/static'):
+        return
+    
+    # Get or create visitor session ID
+    if 'visitor_id' not in session:
+        import uuid
+        session['visitor_id'] = str(uuid.uuid4())
+    
+    # Record visit
+    visitor_id = session['visitor_id']
+    ip_address = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR'))
+    user_agent = request.headers.get('User-Agent')
+    
+    db_manager.record_visit(
+        session_id=visitor_id,
+        ip_address=ip_address,
+        user_agent=user_agent,
+        page_path=request.path
+    )
+
 # --- Fungsi untuk memuat model dan data ---
 def load_model_and_data():
+    """Load chatbot model, intents, words, and classes from files.
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
     global model, intents, words, classes, model_info
     try:
-        model = keras.models.load_model('model/chatbot_brmp_model.h5')
-        intents = json.loads(open('intents.json').read())
-        words = pickle.load(open('model/words.pkl','rb'))
-        classes = pickle.load(open('model/classes.pkl','rb'))
+        model = keras.models.load_model(MODEL_PATH)
+        with open(INTENTS_PATH, 'r', encoding='utf-8') as f:
+            intents = json.load(f)
+        with open(WORDS_PATH, 'rb') as f:
+            words = pickle.load(f)
+        with open(CLASSES_PATH, 'rb') as f:
+            classes = pickle.load(f)
         
         # Update model info dengan data yang lebih akurat
         model_info["total_intents"] = len(intents['intents'])
@@ -70,20 +125,20 @@ def load_model_and_data():
         model_info["total_users"] = 0
         
         # Hitung ukuran file intents.json (dataset)
-        if os.path.exists('intents.json'):
-            dataset_size_bytes = os.path.getsize('intents.json')
+        if os.path.exists(INTENTS_PATH):
+            dataset_size_bytes = os.path.getsize(INTENTS_PATH)
             model_info["model_size"] = f"{dataset_size_bytes / 1024:.1f} KB"
             
-            # Get last training time from model file
-            mod_time = os.path.getmtime('model/chatbot_brmp_model.h5')
-            last_training = datetime.fromtimestamp(mod_time)
-            model_info["last_training"] = last_training.strftime("%Y-%m-%d %H:%M:%S")
-        
-        # Get dataset update date
-        if os.path.exists('intents.json'):
-            mod_time = os.path.getmtime('intents.json')
+            # Get dataset update date
+            mod_time = os.path.getmtime(INTENTS_PATH)
             last_modified = datetime.fromtimestamp(mod_time)
             model_info["dataset_update"] = last_modified.strftime('%d %b %Y, %H:%M WIB')
+        
+        # Get last training time from model file
+        if os.path.exists(MODEL_PATH):
+            mod_time = os.path.getmtime(MODEL_PATH)
+            last_training = datetime.fromtimestamp(mod_time)
+            model_info["last_training"] = last_training.strftime("%Y-%m-%d %H:%M:%S")
         
         # Update status information
         model_info["accuracy"] = "95.2%"
@@ -112,90 +167,122 @@ load_model_and_data()
 lemmatizer = WordNetLemmatizer()
 
 def normalize_repeated_chars(text):
-    """Normalisasi huruf berulang (pagiii -> pagi, halooo -> halo)"""
+    """Normalize repeated characters in text.
+    
+    Examples:
+        pagiii -> pagi
+        halooo -> halo
+        terimaaaa -> terima
+    
+    Args:
+        text (str): Input text with potential repeated characters
+        
+    Returns:
+        str: Normalized text
+    """
     import re
-    # Ganti 3+ karakter berulang menjadi 2 karakter
-    # Contoh: halooo -> haloo, terimaaaa -> terimaa
     normalized = re.sub(r'(.)\1{2,}', r'\1\1', text)
-    # Kemudian ganti 2 karakter berulang menjadi 1 untuk kata pendek
-    # Contoh: haloo -> halo, pagii -> pagi
     normalized = re.sub(r'(.)\1+', r'\1', normalized)
     return normalized
 
 def clean_up_sentence(sentence):
-    # Normalisasi huruf berulang dulu
+    """Clean and tokenize sentence for processing.
+    
+    Args:
+        sentence (str): Input sentence
+        
+    Returns:
+        list: List of lemmatized tokens
+    """
     sentence = normalize_repeated_chars(sentence.lower())
-    
-    # Tokenize
     sentence_words = nltk.word_tokenize(sentence)
-    
-    # Lemmatize
     sentence_words = [lemmatizer.lemmatize(word) for word in sentence_words]
-    
     return sentence_words
 
 def string_similarity(a, b):
-    """Hitung similarity antara dua string menggunakan SequenceMatcher"""
+    """Calculate similarity ratio between two strings.
+    
+    Args:
+        a (str): First string
+        b (str): Second string
+        
+    Returns:
+        float: Similarity ratio (0.0 to 1.0)
+    """
     return SequenceMatcher(None, a, b).ratio()
 
 def bag_of_words(sentence, words):
+    """Convert sentence to bag of words array with fuzzy matching.
+    
+    Args:
+        sentence (str): Input sentence
+        words (list): List of vocabulary words
+        
+    Returns:
+        numpy.ndarray: Bag of words representation
+    """
     sentence_words = clean_up_sentence(sentence)
     bag = np.zeros(len(words), dtype=np.float32)
     
-    # Threshold untuk fuzzy matching (0.0-1.0)
-    # 0.75 = 75% similarity required (lebih toleran untuk typo)
-    SIMILARITY_THRESHOLD = 0.75
-    
     for sw in sentence_words:
         for i, word in enumerate(words):
-            # Exact match - prioritas tertinggi
             if word == sw:
+                # Exact match - prioritas tertinggi
                 bag[i] = 1.0
-            # Fuzzy match - untuk menangani typo dan variasi
             else:
+                # Fuzzy match - untuk menangani typo dan variasi
                 similarity = string_similarity(word, sw)
                 if similarity >= SIMILARITY_THRESHOLD:
-                    # Berikan score sesuai tingkat similarity
                     bag[i] = similarity
                     
     return bag
 
 def predict_class(sentence):
+    """Predict intent class from sentence.
+    
+    Args:
+        sentence (str): Input sentence
+        
+    Returns:
+        list: List of [index, confidence] pairs above threshold
+    """
     p = bag_of_words(sentence, words)
     res = model.predict(np.expand_dims(p, axis=0))[0]
     
-    # Threshold lebih tinggi untuk akurasi lebih baik
-    # 0.50 = 50% confidence minimum (lebih tinggi = lebih akurat)
-    ERROR_THRESHOLD = 0.50
-    
-    results = [[i,r] for i,r in enumerate(res) if r>ERROR_THRESHOLD]
+    results = [[i, r] for i, r in enumerate(res) if r > CONFIDENCE_THRESHOLD]
     results.sort(key=lambda x: x[1], reverse=True)
     
     return results
 
 def getResponse(ints, intents_json):
+    """Get response from predicted intent.
+    
+    Args:
+        ints (list): List of predicted intents with confidence
+        intents_json (dict): Intents configuration
+        
+    Returns:
+        str: Response message
+    """
+    fallback_responses = [
+        "Maaf, aku tidak mengerti. Bisa coba kata lain?",
+        "Hmm, aku kurang paham. Coba jelaskan dengan cara lain?",
+        "Maaf, aku belum bisa menjawab itu. Ada pertanyaan lain?"
+    ]
+    
     if not ints:
-        fallback_responses = [
-            "Maaf, aku tidak mengerti. Bisa coba kata lain?",
-            "Hmm, aku kurang paham. Coba jelaskan dengan cara lain?",
-            "Maaf, aku belum bisa menjawab itu. Ada pertanyaan lain?"
-        ]
         return random.choice(fallback_responses)
     
     tag = classes[ints[0][0]]
     confidence = ints[0][1]
     
-    list_of_intents = intents_json['intents']
-    for i in list_of_intents:
-        if i['tag'] == tag:
-            result = random.choice(i['responses'])
-            
-            # Debug log untuk monitoring
+    for intent in intents_json['intents']:
+        if intent['tag'] == tag:
+            response = random.choice(intent['responses'])
             print(f"Response: {tag} (confidence: {confidence:.2f})")
-            
-            return result
+            return response
     
-    return "Maaf, aku tidak menemukan jawaban untuk itu."
+    return random.choice(fallback_responses)
 
 def train_model_async():
     """Fungsi untuk melatih model secara asinkron"""
@@ -296,44 +383,51 @@ def train_model_async():
         traceback.print_exc()  # Print full traceback
         training_status = {"status": "error", "progress": 0, "message": f"Training failed: {str(e)}"}
 
+# ===== Public Routes =====
+
 @app.route('/')
 def index():
+    """Render main chatbot page with dynamic content."""
     if 'messages' not in session:
         session['messages'] = [{"role": "assistant", "content": "Hai! Ada yang bisa aku bantu hari ini?"}]
-    return render_template('index.html', title='Chatbot BRMP', now=datetime.now())
+    
+    content_settings = db_manager.get_content_settings()
+    return render_template('index.html', title='Chatbot BRMP', now=datetime.now(), content=content_settings)
 
-# --- Authentication Routes ---
+
+# ===== Authentication Routes =====
+
 @app.route('/admin/login', methods=['GET', 'POST'])
 def login_page():
+    """Handle admin login - GET shows form, POST processes credentials."""
     if request.method == 'GET':
-        # If already logged in, redirect to admin
         if 'admin_logged_in' in session:
             return redirect(url_for('admin'))
         return render_template('login.html')
     
-    elif request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+    username = request.form.get('username')
+    password = request.form.get('password')
+    
+    admin = db_manager.verify_admin_credentials(username, password)
+    if admin:
+        session['admin_logged_in'] = True
+        session['admin_username'] = username
+        session['admin_id'] = admin['id']
         
-        admin = db_manager.verify_admin_credentials(username, password)
-        if admin:
-            session['admin_logged_in'] = True
-            session['admin_username'] = username
-            session['admin_id'] = admin['id']
-            
-            # Log login activity
-            ip_address = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR'))
-            db_manager.log_activity(admin['id'], 'LOGIN', f"Admin {username} logged in", ip_address)
-            
-            return jsonify({"status": "success", "message": "Login berhasil"})
-        else:
-            return jsonify({"status": "error", "message": "Username atau password salah"})
+        ip_address = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR'))
+        db_manager.log_activity(admin['id'], 'LOGIN', f"Admin {username} logged in", ip_address)
+        
+        return jsonify({"status": "success", "message": "Login berhasil"})
+    
+    return jsonify({"status": "error", "message": "Username atau password salah"})
+
 
 @app.route('/admin/logout')
 def logout():
-    # Log logout activity
+    """Log out admin user and clear session."""
     admin_id = session.get('admin_id')
     username = session.get('admin_username')
+    
     if admin_id and username:
         ip_address = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR'))
         db_manager.log_activity(admin_id, 'LOGOUT', f"Admin {username} logged out", ip_address)
@@ -341,27 +435,92 @@ def logout():
     session.clear()
     return redirect(url_for('login_page'))
 
-# --- Rute Halaman Admin ---
+
+# ===== Admin Dashboard Routes =====
+
 @app.route('/admin')
 @login_required
 def admin():
+    """Render admin dashboard page."""
     return render_template('admin.html')
+
 
 @app.route('/admin/management')
 @login_required
 def admin_management():
+    """Render admin management page."""
     return render_template('admin_management.html')
 
-# --- Admin Management API ---
+
+@app.route('/admin/analytics')
+@login_required
+def admin_analytics():
+    """Render visitor analytics page."""
+    return render_template('analytics.html')
+
+
+@app.route('/admin/content-management', methods=['GET', 'POST'])
+@login_required
+def content_management():
+    """Handle content management - GET shows form, POST updates settings and logos."""
+    if request.method == 'POST':
+        try:
+            chatbot_name = request.form.get('chatbot_name')
+            subtitle = request.form.get('subtitle')
+            copyright_text = request.form.get('copyright_text')
+            
+            settings_to_update = {}
+            if chatbot_name:
+                settings_to_update['chatbot_name'] = chatbot_name
+            if subtitle:
+                settings_to_update['subtitle'] = subtitle
+            if copyright_text:
+                settings_to_update['copyright_text'] = copyright_text
+            
+            # Handle logo uploads
+            for logo_key in ['logo_dark', 'logo_light']:
+                if logo_key in request.files:
+                    logo_file = request.files[logo_key]
+                    if logo_file.filename:
+                        file_ext = logo_file.filename.rsplit('.', 1)[1].lower() if '.' in logo_file.filename else ''
+                        
+                        if file_ext not in ALLOWED_IMAGE_EXTENSIONS:
+                            return jsonify({"status": "error", "message": f"Format {logo_key} tidak valid"})
+                        
+                        filename = f"{logo_key}.{file_ext}"
+                        filepath = os.path.join('static', 'image', filename)
+                        logo_file.save(filepath)
+                        settings_to_update[logo_key] = f"image/{filename}"
+            
+            admin_id = session.get('admin_id')
+            result = db_manager.update_multiple_settings(settings_to_update, admin_id)
+            
+            if result["status"] == "success" and admin_id:
+                ip_address = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR'))
+                db_manager.log_activity(admin_id, 'UPDATE_CONTENT', 'Updated chatbot content settings', ip_address)
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Error: {str(e)}"})
+    
+    content_settings = db_manager.get_content_settings()
+    return render_template('content_management.html', content=content_settings)
+
+
+# ===== Admin Management API =====
+
 @app.route('/api/admin/list')
 @login_required
 def get_admin_list():
-    admins = db_manager.get_all_admins()
-    return jsonify(admins)
+    """Get list of all active admin users."""
+    return jsonify(db_manager.get_all_admins())
+
 
 @app.route('/api/admin/add', methods=['POST'])
 @login_required
 def add_admin():
+    """Add new admin user with validation."""
     username = request.form.get('username')
     password = request.form.get('password')
     
@@ -371,10 +530,8 @@ def add_admin():
     if len(password) < 6:
         return jsonify({"status": "error", "message": "Password minimal 6 karakter"})
     
-    # Add new admin using database manager
     result = db_manager.create_admin(username, password)
     
-    # Log activity if successful
     if result["status"] == "success":
         admin_id = session.get('admin_id')
         if admin_id:
@@ -383,23 +540,22 @@ def add_admin():
     
     return jsonify(result)
 
+
 @app.route('/api/admin/delete', methods=['POST'])
 @login_required
 def delete_admin():
+    """Delete admin user (soft delete) with validation."""
     data = request.get_json()
     username = data.get('username')
     
     if not username:
         return jsonify({"status": "error", "message": "Username harus diisi"})
     
-    # Prevent deleting current user
     if username == session.get('admin_username'):
         return jsonify({"status": "error", "message": "Tidak dapat menghapus akun sendiri"})
     
-    # Delete admin using database manager
     result = db_manager.delete_admin(username)
     
-    # Log activity if successful
     if result["status"] == "success":
         admin_id = session.get('admin_id')
         if admin_id:
@@ -408,25 +564,26 @@ def delete_admin():
     
     return jsonify(result)
 
+
 @app.route('/api/admin/current-user')
 @login_required
 def get_current_user():
-    username = session.get('admin_username', 'Unknown')
-    print(f"DEBUG: Current user API called, returning: {username}")
-    return jsonify({"username": username})
+    """Get current logged-in admin username."""
+    return jsonify({"username": session.get('admin_username', 'Unknown')})
 
-# --- API untuk mendapatkan informasi model ---
+
 @app.route('/api/admin/model-info')
 @login_required
 def get_model_info():
+    """Get chatbot model information and statistics."""
     return jsonify(model_info)
 
-# --- API untuk mendapatkan status training ---
+
 @app.route('/api/admin/training-status')
 @login_required
 def get_training_status():
+    """Get current model training status and progress."""
     try:
-        print(f"Training status requested: {training_status}")  # Debug log
         return jsonify(training_status)
     except Exception as e:
         print(f"Error getting training status: {str(e)}")
@@ -619,6 +776,30 @@ def get_system_stats():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
+
+@app.route('/api/admin/analytics')
+@login_required
+def get_analytics():
+    """Get visitor analytics data with optional period filter."""
+    try:
+        period = request.args.get('period', 'day')  # day, week, or month
+        
+        if period not in ['day', 'week', 'month']:
+            return jsonify({"status": "error", "message": "Invalid period"}), 400
+        
+        stats = db_manager.get_visit_stats(period)
+        all_time = db_manager.get_all_time_stats()
+        
+        return jsonify({
+            "status": "success",
+            "current_period": stats,
+            "all_time": all_time
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ===== Chatbot API Routes =====
 
 @app.route('/api/chat', methods=['POST'])
 def chat_api():

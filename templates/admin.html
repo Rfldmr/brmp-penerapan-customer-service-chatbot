@@ -123,10 +123,16 @@
                     <!-- Navigation Menu -->
                     <nav class="hidden md:flex space-x-6">
                         <a href="/admin" class="text-yellow-600 bg-yellow-50 px-3 py-2 rounded-lg font-medium border border-yellow-400">
-                            <i class="fas fa-chart-line mr-2"></i>Dashboard
+                            <i class="fas fa-chart-line mr-2"></i>Edit Dataset
                         </a>
                         <a href="/admin/management" class="text-gray-700 hover:text-yellow-600 px-3 py-2 rounded-lg transition-colors duration-200 font-medium">
-                            <i class="fas fa-users-cog mr-2"></i>Admin Management
+                            <i class="fas fa-users-cog mr-2"></i>Edit Admin
+                        </a>
+                        <a href="/admin/content-management" class="text-gray-700 hover:text-yellow-600 px-3 py-2 rounded-lg transition-colors duration-200 font-medium">
+                            <i class="fas fa-palette mr-2"></i>Edit Konten
+                        </a>
+                        <a href="/admin/analytics" class="text-gray-700 hover:text-yellow-600 px-3 py-2 rounded-lg transition-colors duration-200 font-medium">
+                            <i class="fas fa-chart-bar mr-2"></i>Dashboard Kunjungan
                         </a>
                     </nav>
                     
@@ -140,7 +146,7 @@
 
     <div class="container mx-auto p-6">
         <!-- Statistics Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-primary-100 hover:border-primary-200 group">
                 <div class="flex items-center justify-between">
                     <div>
@@ -160,17 +166,6 @@
                     </div>
                     <div class="bg-gradient-to-br from-success-100 to-success-200 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
                         <i class="fas fa-list text-success-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-secondary-100 hover:border-secondary-200 group">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h3 class="text-sm font-medium text-gray-600 mb-1">Jumlah Pengguna</h3>
-                        <p class="text-3xl font-bold text-gray-800 group-hover:text-secondary-600 transition-colors" id="total-users">Loading...</p>
-                    </div>
-                    <div class="bg-gradient-to-br from-secondary-100 to-secondary-200 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
-                        <i class="fas fa-users text-secondary-600 text-xl"></i>
                     </div>
                 </div>
             </div>
@@ -301,6 +296,11 @@
             document.getElementById('loading-modal').classList.remove('hidden');
             document.getElementById('loading-modal').classList.add('flex');
         });
+    </script>
+
+    <script>
+        // Admin Dashboard Scripts
+
     </script>
 
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>

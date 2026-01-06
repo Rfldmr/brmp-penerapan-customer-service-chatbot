@@ -1,20 +1,45 @@
 # Virtual Environment
 venv/
+env/
+ENV/
+.venv
 
 # Python Cache
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyc
+.Python
+
+# Distribution / Packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
+chatbot_admin.db
 
-# Model Backups
+# Model Files & Backups
 model/backup_*.h5
 intents_backup_*.json
+*.pkl.backup
+*.h5.backup
 
 # IDE
 .vscode/
@@ -22,10 +47,29 @@ intents_backup_*.json
 *.swp
 *.swo
 *~
+.project
+.pydevproject
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
+*.lnk
 
 # Logs
 *.log
+logs/
+
+# Environment Variables
+.env
+.env.local
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temporary files
+*.tmp
+*.temp
+~$*

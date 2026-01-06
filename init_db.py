@@ -50,6 +50,58 @@ def init_database():
         )
     ''')
     
+    # Create content settings table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS content_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            setting_key TEXT UNIQUE NOT NULL,
+            setting_value TEXT NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_by INTEGER,
+            FOREIGN KEY (updated_by) REFERENCES admins (id)
+        )
+    ''')
+    
+    # Create visitor visits table for analytics
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS visitor_visits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL,
+            ip_address TEXT,
+            user_agent TEXT,
+            visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            page_path TEXT DEFAULT '/'
+        )
+    ''')
+    
+    # Create index for faster queries
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_visits_date 
+        ON visitor_visits(visited_at)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_visits_session 
+        ON visitor_visits(session_id)
+    ''')
+    
+    # Insert default content settings if not exist
+    default_settings = [
+        ('logo_dark', 'static/image/logo_dark.png'),
+        ('logo_light', 'static/image/profil.png'),
+        ('chatbot_name', 'BRMP Penerapan Chatbot'),
+        ('subtitle', 'Selamat Datang di Chatbot BRMP Penerapan'),
+        ('copyright_text', '© 2025 BRMP Penerapan. All Rights Reserved')
+    ]
+    
+    for key, value in default_settings:
+        cursor.execute('SELECT COUNT(*) FROM content_settings WHERE setting_key = ?', (key,))
+        if cursor.fetchone()[0] == 0:
+            cursor.execute('''
+                INSERT INTO content_settings (setting_key, setting_value, updated_at)
+                VALUES (?, ?, ?)
+            ''', (key, value, datetime.now().isoformat()))
+    
     # Check if default admin exists
     cursor.execute('SELECT COUNT(*) FROM admins WHERE username = ?', ('admin',))
     if cursor.fetchone()[0] == 0:

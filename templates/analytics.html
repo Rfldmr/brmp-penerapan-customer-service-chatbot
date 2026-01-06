@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visitor Analytics - Chatbot BRMP</title>
+    <link rel="icon" href="{{ url_for('static', filename='image/profil.png') }}" type="image/png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a'
+                        },
+                        secondary: {
+                            50: '#fefce8',
+                            100: '#fef9c3',
+                            200: '#fef08a',
+                            300: '#fde047',
+                            400: '#facc15',
+                            500: '#eab308',
+                            600: '#ca8a04',
+                            700: '#a16207',
+                            800: '#854d0e',
+                            900: '#713f12'
+                        },
+                        success: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d'
+                        },
+                        info: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen font-poppins">
+
+    <!-- Navigation -->
+    <nav class="bg-white/95 backdrop-blur-sm shadow-lg border-b border-primary-200">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <img src="{{ url_for('static', filename='image/profil.png') }}" alt="BRMP Logo" class="h-12 w-12">
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800">Dashboard Admin</h1>
+                        <p class="text-sm text-yellow-600">Chatbot AI BRMP Penerapan</p>
+                    </div>
+                </div>  
+                <div class="flex items-center space-x-6">
+                    <!-- Navigation Menu -->
+                    <nav class="hidden md:flex space-x-6">
+                        <a href="/admin" class="text-gray-700 hover:text-yellow-600 px-3 py-2 rounded-lg transition-colors duration-200 font-medium">
+                            <i class="fas fa-chart-line mr-2"></i>Edit Dataset
+                        </a>
+                        <a href="/admin/management" class="text-gray-700 hover:text-yellow-600 px-3 py-2 rounded-lg transition-colors duration-200 font-medium">
+                            <i class="fas fa-users-cog mr-2"></i>Edit Admin
+                        </a>
+                        <a href="/admin/content-management" class="text-gray-700 hover:text-yellow-600 px-3 py-2 rounded-lg transition-colors duration-200 font-medium">
+                            <i class="fas fa-palette mr-2"></i>Edit Konten
+                        </a>
+                        <a href="/admin/analytics" class="text-yellow-600 bg-yellow-50 px-3 py-2 rounded-lg font-medium border border-yellow-400">
+                            <i class="fas fa-chart-bar mr-2"></i>Dashboard Kunjungan
+                        </a>
+                    </nav>
+                    
+                    <button onclick="logout()" class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-2 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-6">
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-info-100 hover:border-info-200 group">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-600 mb-1">Total Kunjungan</h3>
+                        <p class="text-3xl font-bold text-gray-800 group-hover:text-info-600 transition-colors" id="total-visits">0</p>
+                        <p class="text-xs text-gray-500 mt-1">Sepanjang waktu</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-info-100 to-info-200 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                        <i class="fas fa-chart-line text-info-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-success-100 hover:border-success-200 group">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-600 mb-1">Pengunjung Unik</h3>
+                        <p class="text-3xl font-bold text-gray-800 group-hover:text-success-600 transition-colors" id="unique-visitors">0</p>
+                        <p class="text-xs text-gray-500 mt-1">Sepanjang waktu</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-success-100 to-success-200 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                        <i class="fas fa-users text-success-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-primary-100 hover:border-primary-200 group">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-600 mb-1">Kunjungan Periode</h3>
+                        <p class="text-3xl font-bold text-gray-800 group-hover:text-primary-600 transition-colors" id="period-visits">0</p>
+                        <p class="text-xs text-gray-500 mt-1" id="period-label">Hari ini</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-primary-100 to-primary-200 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                        <i class="fas fa-eye text-primary-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-secondary-100 hover:border-secondary-200 group">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-600 mb-1">Rata-rata</h3>
+                        <p class="text-3xl font-bold text-gray-800 group-hover:text-secondary-600 transition-colors" id="avg-visits">0</p>
+                        <p class="text-xs text-gray-500 mt-1">Per periode</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-secondary-100 to-secondary-200 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                        <i class="fas fa-chart-pie text-secondary-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Chart Section -->
+        <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-white/50 mb-8">
+            <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 p-6 text-white">
+                <div class="flex justify-between items-center flex-wrap gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold flex items-center">
+                            <i class="fas fa-chart-bar mr-3"></i>
+                            Dashboard Analisis Kunjungan
+                        </h2>
+                        <p class="text-info-100 mt-2">Visualisasi data kunjungan pengunjung chatbot secara real-time</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="loadAnalytics('day')" id="btn-day" class="px-4 py-2 bg-white text-yellow-500 rounded-lg font-medium hover:bg-yellow-50 transition-all active-period shadow-lg">
+                            <i class="fas fa-calendar-day mr-2"></i>Hari Ini
+                        </button>
+                        <button onclick="loadAnalytics('week')" id="btn-week" class="px-4 py-2 bg-yellow-500 text-white rounded-lg font-medium hover:bg-white hover:text-yellow-500 transition-all shadow-lg">
+                            <i class="fas fa-calendar-week mr-2"></i>7 Hari
+                        </button>
+                        <button onclick="loadAnalytics('month')" id="btn-month" class="px-4 py-2 bg-yellow-500 text-white rounded-lg font-medium hover:bg-white hover:text-yellow-500 transition-all shadow-lg">
+                            <i class="fas fa-calendar-alt mr-2"></i>30 Hari
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-8">
+                <div class="mb-6">
+                    <canvas id="visitsChart" height="100"></canvas>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border-2 border-blue-200 hover:shadow-lg transition-all">
+                        <div class="flex items-center">
+                            <div class="bg-blue-500 p-4 rounded-full mr-4">
+                                <i class="fas fa-eye text-white text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-blue-600 font-semibold uppercase tracking-wide">Total Kunjungan</p>
+                                <p class="text-3xl font-bold text-blue-900" id="period-visits-detail">0</p>
+                                <p class="text-xs text-blue-600 mt-1">Pada periode ini</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border-2 border-green-200 hover:shadow-lg transition-all">
+                        <div class="flex items-center">
+                            <div class="bg-green-500 p-4 rounded-full mr-4">
+                                <i class="fas fa-user-friends text-white text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-green-600 font-semibold uppercase tracking-wide">Pengunjung Unik</p>
+                                <p class="text-3xl font-bold text-green-900" id="period-unique">0</p>
+                                <p class="text-xs text-green-600 mt-1">Pada periode ini</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border-2 border-purple-200 hover:shadow-lg transition-all">
+                        <div class="flex items-center">
+                            <div class="bg-purple-500 p-4 rounded-full mr-4">
+                                <i class="fas fa-chart-line text-white text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-purple-600 font-semibold uppercase tracking-wide">Rata-rata</p>
+                                <p class="text-3xl font-bold text-purple-900" id="avg-visits-detail">0</p>
+                                <p class="text-xs text-purple-600 mt-1">Kunjungan per periode</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Info -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-info-circle text-yellow-600 mr-2"></i>
+                    Informasi Analytics
+                </h3>
+                <ul class="space-y-3 text-sm text-gray-600">
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle text-success-600 mr-2 mt-0.5"></i>
+                        <span>Data kunjungan direkam secara otomatis untuk semua pengunjung chatbot</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle text-success-600 mr-2 mt-0.5"></i>
+                        <span>Tracking berbasis session tanpa memerlukan login pengguna</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle text-success-600 mr-2 mt-0.5"></i>
+                        <span>Data di-refresh otomatis setiap 30 detik</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle text-success-600 mr-2 mt-0.5"></i>
+                        <span>Filter tersedia untuk hari ini, 7 hari, dan 30 hari terakhir</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-clock text-yellow-600 mr-2"></i>
+                    Update Terakhir
+                </h3>
+                <div class="space-y-2 text-sm text-gray-600">
+                    <p><span class="font-semibold">Waktu:</span> <span id="last-update">-</span></p>
+                    <p><span class="font-semibold">Status:</span> <span class="text-success-600 font-medium">● Active</span></p>
+                    <p class="text-xs text-gray-500 mt-4">Dashboard akan otomatis refresh setiap 30 detik untuk menampilkan data terbaru</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let visitsChart = null;
+        let currentPeriod = 'day';
+
+        function loadAnalytics(period) {
+            currentPeriod = period;
+            
+            // Update button states
+            ['day', 'week', 'month'].forEach(p => {
+                const btn = document.getElementById(`btn-${p}`);
+                if (p === period) {
+                    btn.classList.add('active-period', 'bg-white', 'text-yellow-500');
+                    btn.classList.remove('bg-yellow-500', 'text-white');
+                } else {
+                    btn.classList.remove('active-period', 'bg-white', 'text-yellow-500');
+                    btn.classList.add('bg-yellow-500', 'text-white');
+                }
+            });
+
+            // Update period label
+            const periodLabels = {
+                'day': 'Hari ini',
+                'week': '7 hari terakhir',
+                'month': '30 hari terakhir'
+            };
+            document.getElementById('period-label').textContent = periodLabels[period];
+
+            fetch(`/api/admin/analytics?period=${period}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        updateAnalyticsDisplay(data);
+                        updateLastUpdate();
+                    }
+                })
+                .catch(error => console.error('Error loading analytics:', error));
+        }
+
+        function updateAnalyticsDisplay(data) {
+            const current = data.current_period;
+            const allTime = data.all_time;
+
+            // Update cards
+            document.getElementById('total-visits').textContent = allTime.total_visits;
+            document.getElementById('unique-visitors').textContent = allTime.unique_visitors;
+            document.getElementById('period-visits').textContent = current.total_visits;
+            document.getElementById('period-visits-detail').textContent = current.total_visits;
+            document.getElementById('period-unique').textContent = current.unique_visitors;
+            
+            // Calculate average
+            const avgVisits = current.trend_data.length > 0 
+                ? Math.round(current.total_visits / current.trend_data.length) 
+                : 0;
+            document.getElementById('avg-visits').textContent = avgVisits;
+            document.getElementById('avg-visits-detail').textContent = avgVisits;
+
+            // Update chart
+            updateChart(current.trend_data, current.period);
+        }
+
+        function updateChart(trendData, period) {
+            const ctx = document.getElementById('visitsChart').getContext('2d');
+            
+            const labels = trendData.map(d => d.period);
+            const visits = trendData.map(d => d.visits);
+            const uniqueVisitors = trendData.map(d => d.unique_visitors);
+
+            if (visitsChart) {
+                visitsChart.destroy();
+            }
+
+            visitsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Total Kunjungan',
+                            data: visits,
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: 'Pengunjung Unik',
+                            data: uniqueVisitors,
+                            borderColor: 'rgb(34, 197, 94)',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                padding: 20
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: `Statistik Kunjungan - ${period === 'day' ? 'Hari Ini' : period === 'week' ? '7 Hari Terakhir' : '30 Hari Terakhir'}`,
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            },
+                            padding: 20
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: {
+                                size: 14
+                            },
+                            bodyFont: {
+                                size: 13
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                font: {
+                                    size: 12
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateLastUpdate() {
+            const now = new Date();
+            const timeString = now.toLocaleString('id-ID', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('last-update').textContent = timeString;
+        }
+
+        function logout() {
+            if (confirm('Apakah Anda yakin ingin logout?')) {
+                window.location.href = '/admin/logout';
+            }
+        }
+
+        // Load analytics on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAnalytics('day');
+            updateLastUpdate();
+            
+            // Refresh analytics every 30 seconds
+            setInterval(() => {
+                loadAnalytics(currentPeriod);
+            }, 30000);
+        });
+    </script>
+</body>
+</html>

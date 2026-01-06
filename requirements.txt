@@ -4,10 +4,4 @@ numpy==1.24.3
 tensorflow
 nltk==3.8.1
 werkzeug==3.0.1
-
-# Production WSGI Server (pilih salah satu)
-waitress==2.1.2        # Untuk Windows (Recommended)
-# gunicorn==21.2.0     # Untuk Linux/Mac (uncomment jika perlu)
-
-# Optional: Monitoring & Logging
-# flask-cors==4.0.0    # Jika perlu CORS
+waitress==2.1.2

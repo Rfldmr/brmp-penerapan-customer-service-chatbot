@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Management - Chatbot BRMP</title>
+    <link rel="icon" href="{{ url_for('static', filename='image/profil.png') }}" type="image/png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a'
+                        },
+                        secondary: {
+                            50: '#fefce8',
+                            100: '#fef9c3',
+                            200: '#fef08a',
+                            300: '#fde047',
+                            400: '#facc15',
+                            500: '#eab308',
+                            600: '#ca8a04',
+                            700: '#a16207',
+                            800: '#854d0e',
+                            900: '#713f12'
+                        },
+                        success: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d'
+                        },
+                        danger: {
+                            50: '#fef2f2',
+                            100: '#fee2e2',
+                            200: '#fecaca',
+                            300: '#fca5a5',
+                            400: '#f87171',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                            800: '#991b1b',
+                            900: '#7f1d1d'
+                        },
+                        info: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen font-poppins">
+
+    <!-- Navigation -->
+    <nav class="bg-white/95 backdrop-blur-sm shadow-lg border-b border-primary-200">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <img src="{{ url_for('static', filename='image/profil.png') }}" alt="BRMP Logo" class="h-12 w-12">
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800">Dashboard Admin</h1>
+                        <p class="text-sm text-yellow-600">Chatbot AI BRMP Penerapan</p>
+                    </div>
+                </div>  
+                <div class="flex items-center space-x-6">
+                    <!-- Navigation Menu -->
+                    <nav class="hidden md:flex space-x-6">
+                        <a href="/admin" class="text-gray-700 hover:text-yellow-600 px-3 py-2 rounded-lg transition-colors duration-200 font-medium">
+                            <i class="fas fa-chart-line mr-2"></i>Edit Dataset
+                        </a>
+                        <a href="/admin/management" class="text-gray-700 hover:text-yellow-600 px-3 py-2 rounded-lg transition-colors duration-200 font-medium">
+                            <i class="fas fa-users-cog mr-2"></i>Edit Admin
+                        </a>
+                        <a href="/admin/content-management" class="text-yellow-600 bg-yellow-50 px-3 py-2 rounded-lg font-medium border border-yellow-400">
+                            <i class="fas fa-palette mr-2"></i>Edit Konten
+                        </a>
+                        <a href="/admin/analytics" class="text-gray-700 hover:text-yellow-600 px-3 py-2 rounded-lg transition-colors duration-200 font-medium">
+                            <i class="fas fa-chart-bar mr-2"></i>Dashboard Kunjungan
+                        </a>
+                    </nav>
+                    
+                    <button onclick="logout()" class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-2 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-6">
+        <!-- Alert Messages -->
+        <div id="alert-container"></div>
+
+        <!-- Content Management Section -->
+        <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-white/50">
+            <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 p-6 text-white">
+                <h3 class="text-xl font-bold flex items-center">
+                    <i class="fas fa-palette mr-3"></i>
+                    Manajemen Konten Chatbot
+                </h3>
+                <p class="text-yellow-100 mt-2">Kelola logo, nama, subtitle, dan teks copyright chatbot</p>
+            </div>
+            
+            <div class="p-8">
+                <form id="content-form" class="space-y-8">
+                    
+                    <!-- Logo Section -->
+                    <div class="border-b border-gray-200 pb-8">
+                        <h4 class="text-lg font-bold text-gray-800 mb-6 flex items-center">
+                            <i class="fas fa-image mr-2 text-yellow-600"></i>
+                            Logo Management
+                        </h4>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Logo Dark -->
+                            <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                                <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                    <i class="fas fa-moon mr-2"></i>Logo Dark (Sidebar)
+                                </label>
+                                <div class="mb-4">
+                                    <img id="logo-dark-preview" src="{{ url_for('static', filename=content.logo_dark) }}" 
+                                         alt="Logo Dark" class="h-20 mb-3 object-contain bg-white p-2 rounded border">
+                                </div>
+                                <input type="file" id="logo-dark" name="logo_dark" accept="image/*" 
+                                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-yellow-50 file:text-yellow-700 hover:file:bg-yellow-100 cursor-pointer">
+                                <p class="text-xs text-gray-500 mt-2">Format: PNG, JPG, SVG (Max: 2MB)</p>
+                            </div>
+
+                            <!-- Logo Light -->
+                            <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                                <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                    <i class="fas fa-sun mr-2"></i>Logo Light (Chat Icon)
+                                </label>
+                                <div class="mb-4">
+                                    <img id="logo-light-preview" src="{{ url_for('static', filename=content.logo_light) }}" 
+                                         alt="Logo Light" class="h-20 mb-3 object-contain bg-gray-100 p-2 rounded-full border">
+                                </div>
+                                <input type="file" id="logo-light" name="logo_light" accept="image/*" 
+                                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-yellow-50 file:text-yellow-700 hover:file:bg-yellow-100 cursor-pointer">
+                                <p class="text-xs text-gray-500 mt-2">Format: PNG, JPG, SVG (Max: 2MB)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Text Content Section -->
+                    <div class="border-b border-gray-200 pb-8">
+                        <h4 class="text-lg font-bold text-gray-800 mb-6 flex items-center">
+                            <i class="fas fa-font mr-2 text-yellow-600"></i>
+                            Text Content
+                        </h4>
+                        
+                        <div class="space-y-6">
+                            <!-- Chatbot Name -->
+                            <div>
+                                <label for="chatbot-name" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-robot mr-2"></i>Nama Chatbot
+                                </label>
+                                <input type="text" id="chatbot-name" name="chatbot_name" 
+                                       value="{{ content.chatbot_name }}"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
+                                       placeholder="Contoh: BRMP Penerapan Chatbot" required>
+                                <p class="text-xs text-gray-500 mt-1">Nama akan ditampilkan di header chat</p>
+                            </div>
+
+                            <!-- Subtitle -->
+                            <div>
+                                <label for="subtitle" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-heading mr-2"></i>Subtitle (Welcome Text)
+                                </label>
+                                <input type="text" id="subtitle" name="subtitle" 
+                                       value="{{ content.subtitle }}"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
+                                       placeholder="Contoh: Selamat Datang di Chatbot BRMP Penerapan" required>
+                                <p class="text-xs text-gray-500 mt-1">Teks sambutan di sidebar</p>
+                            </div>
+
+                            <!-- Copyright Text -->
+                            <div>
+                                <label for="copyright" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-copyright mr-2"></i>Copyright Text
+                                </label>
+                                <input type="text" id="copyright" name="copyright_text" 
+                                       value="{{ content.copyright_text }}"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
+                                       placeholder="Contoh: © 2025 BRMP Penerapan. All Rights Reserved" required>
+                                <p class="text-xs text-gray-500 mt-1">Teks copyright di footer sidebar</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex justify-end space-x-4">
+                        <button type="button" onclick="resetForm()" 
+                                class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all duration-200 font-medium">
+                            <i class="fas fa-undo mr-2"></i>Reset
+                        </button>
+                        <button type="submit" 
+                                class="px-6 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105">
+                            <i class="fas fa-save mr-2"></i>Simpan Perubahan
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Preview Section -->
+                <div class="mt-8 border-t border-gray-200 pt-8">
+                    <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-eye mr-2 text-yellow-600"></i>
+                        Preview
+                    </h4>
+                    <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-200">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <img id="preview-logo-light" src="{{ url_for('static', filename=content.logo_light) }}" 
+                                 alt="Preview" class="w-12 h-12 rounded-full border-2 border-green-500">
+                            <div>
+                                <h5 id="preview-chatbot-name" class="font-bold text-lg">{{ content.chatbot_name }}</h5>
+                                <p class="text-sm text-green-600">Online</p>
+                            </div>
+                        </div>
+                        <p id="preview-subtitle" class="text-gray-600 mb-3">{{ content.subtitle }}</p>
+                        <p id="preview-copyright" class="text-sm text-gray-500">{{ content.copyright_text }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Preview image before upload
+        document.getElementById('logo-dark').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('logo-dark-preview').src = event.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('logo-light').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('logo-light-preview').src = event.target.result;
+                    document.getElementById('preview-logo-light').src = event.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Live preview for text fields
+        document.getElementById('chatbot-name').addEventListener('input', function(e) {
+            document.getElementById('preview-chatbot-name').textContent = e.target.value;
+        });
+
+        document.getElementById('subtitle').addEventListener('input', function(e) {
+            document.getElementById('preview-subtitle').textContent = e.target.value;
+        });
+
+        document.getElementById('copyright').addEventListener('input', function(e) {
+            document.getElementById('preview-copyright').textContent = e.target.value;
+        });
+
+        // Form submission
+        document.getElementById('content-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            
+            // Add text fields
+            formData.append('chatbot_name', document.getElementById('chatbot-name').value);
+            formData.append('subtitle', document.getElementById('subtitle').value);
+            formData.append('copyright_text', document.getElementById('copyright').value);
+            
+            // Add logo files if selected
+            const logoDark = document.getElementById('logo-dark').files[0];
+            const logoLight = document.getElementById('logo-light').files[0];
+            
+            if (logoDark) formData.append('logo_dark', logoDark);
+            if (logoLight) formData.append('logo_light', logoLight);
+            
+            try {
+                const response = await fetch('/admin/content-management', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showAlert('success', data.message);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert('error', data.message);
+                }
+            } catch (error) {
+                showAlert('error', 'Terjadi kesalahan saat menyimpan data');
+                console.error('Error:', error);
+            }
+        });
+
+        function showAlert(type, message) {
+            const alertContainer = document.getElementById('alert-container');
+            const alertClass = type === 'success' ? 'bg-green-100 border-green-500 text-green-700' : 'bg-red-100 border-red-500 text-red-700';
+            
+            alertContainer.innerHTML = `
+                <div class="${alertClass} border-l-4 p-4 mb-4 rounded-lg animate-fade-in" role="alert">
+                    <div class="flex items-center">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} mr-3"></i>
+                        <p class="font-medium">${message}</p>
+                    </div>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                alertContainer.innerHTML = '';
+            }, 5000);
+        }
+
+        function resetForm() {
+            if (confirm('Apakah Anda yakin ingin mereset formulir?')) {
+                location.reload();
+            }
+        }
+
+        function logout() {
+            if (confirm('Apakah Anda yakin ingin logout?')) {
+                window.location.href = '/logout';
+            }
+        }
+    </script>
+</body>
+</html>
