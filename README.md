@@ -16,7 +16,7 @@ python app.py
 
 ## ⚙️ Fitur
 
-- 🤖 AI Chatbot dengan TensorFlow
+- 🤖 Rule-Based Chatbot
 - 👨‍💼 Admin Dashboard
 - 📊 Statistics & Analytics
 - 🔐 Authentication System
@@ -24,9 +24,6 @@ python app.py
 - ✨ Fuzzy Matching (Typo Tolerance)
 - 📝 Rich Text Formatting
 - 🔍 Autocomplete/Suggestion Input
-  - User hanya bisa bertanya sesuai patterns di intents.json
-  - Real-time suggestions saat mengetik
-  - Guided conversation experience
 
 ---
 
@@ -37,6 +34,7 @@ python app.py
 - **Database:** SQLite3
 - **Frontend:** HTML, CSS (Tailwind), JavaScript
 - **Production:** Waitress WSGI Server
+
 
 
 
